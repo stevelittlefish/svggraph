@@ -36,7 +36,11 @@ class SvgLineGraphStyle(object):
                  auto_format_y_axis=True,
                  y_label_units=None,
                  y_label_pre_units=None,
-                 show_minor_x_grid_lines=True):
+                 show_minor_x_grid_lines=True,
+                 top_margin=10,
+                 right_margin=4,
+                 bottom_margin=4,
+                 left_margin=4):
 
         self.grid_line_colour = grid_line_colour
         self.axis_line_colour = axis_line_colour
@@ -60,6 +64,10 @@ class SvgLineGraphStyle(object):
         self.y_label_units = y_label_units
         self.y_label_pre_units = y_label_pre_units
         self.show_minor_x_grid_lines = show_minor_x_grid_lines
+        self.right_margin = right_margin
+        self.top_margin = top_margin
+        self.left_margin = left_margin
+        self.bottom_margin = bottom_margin
 
 
 class SvgLineGraphSeriesStyle(object):
@@ -168,6 +176,8 @@ class SvgLineGraph(object):
         self.series.append(series)
 
         for y in series_data:
+            if y is None:
+                continue
             if y < self.y_min:
                 self.y_min = y
 
@@ -214,10 +224,10 @@ class SvgLineGraph(object):
         x_label_height = style.x_scale_text_height
         key_height = style.key_height if style.show_key else 0
 
-        left_margin = y_label_width
-        right_margin = 4
-        top_margin = style.scale_text_size / 2
-        bottom_margin = x_label_height + key_height + 2
+        left_margin = y_label_width + style.left_margin
+        right_margin = style.right_margin
+        top_margin = style.scale_text_size / 2 + style.top_margin
+        bottom_margin = x_label_height + key_height + style.bottom_margin
 
         x_plot_size = width - left_margin - right_margin
         y_plot_size = height - top_margin - bottom_margin
@@ -344,6 +354,9 @@ class SvgLineGraph(object):
                 if style.x_scale_border and x_step == x_steps:
                     continue
 
+                if not self.x_labels[x_step]:
+                    continue
+
                 screen_x = x_math_to_screen(x_step)
 
                 if style.x_label_rotation:
@@ -372,8 +385,8 @@ class SvgLineGraph(object):
 
         # Draw the key
         if style.show_key:
-            key_x_offset = style.key_title_width
-            key_y_offset = height - style.key_height
+            key_x_offset = style.key_title_width + style.left_margin
+            key_y_offset = height - style.key_height - style.bottom_margin
             key_width = width - right_margin - key_x_offset
             key_item_width = key_width / len(self.series)
             key_square_offset = 10
@@ -401,6 +414,9 @@ class SvgLineGraph(object):
             for i in range(series.num_points):
                 math_x = i * x_math_interval
                 math_y = series.data[i]
+
+                if math_y is None:
+                    continue
 
                 screen_x = x_math_to_screen(math_x)
                 screen_y = y_math_to_screen(math_y)
@@ -450,7 +466,7 @@ class SvgLineGraph(object):
             # Plot the lines
             for series in self.series:
                 if series.style.show_line:
-                    for i in range(series.num_points - 1):
+                    for i in range(len(series._screen_points) - 1):
                         x1, y1 = series._screen_points[i]
                         x2, y2 = series._screen_points[i + 1]
 
