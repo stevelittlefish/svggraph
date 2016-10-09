@@ -2,13 +2,13 @@
 Contains code for generating SVG line graphs
 """
 
-__author__ = 'Stephen Brown (Little Fish Solutions LTD)'
-
 import logging
 import math
 import decimal
 
 import svglib
+
+__author__ = 'Stephen Brown (Little Fish Solutions LTD)'
 
 log = logging.getLogger(__name__)
 
@@ -16,6 +16,7 @@ log = logging.getLogger(__name__)
 class SvgLineGraphStyle(object):
     def __init__(self,
                  grid_line_colour='#bbb',
+                 grid_line_minor_colour='#e0e0e0',
                  axis_line_colour='#333',
                  scale_text_colour='#555',
                  scale_text_size=12,
@@ -26,23 +27,70 @@ class SvgLineGraphStyle(object):
                  x_scale_border=False,
                  x_label_rotation=0,
                  show_key=True,
-                 key_height=34,
+                 key_row_height=34,
                  key_title='Key:',
                  key_title_text_colour='#555',
                  key_title_text_size=12,
                  key_title_width=150,
                  key_label_text_colour='#555',
                  key_label_text_size=12,
+                 key_max_rows=1,
+                 key_order_in_columns=False,
                  auto_format_y_axis=True,
                  y_label_units=None,
                  y_label_pre_units=None,
+                 y_interval=None,
+                 y_minor_interval=None,
                  show_minor_x_grid_lines=True,
+                 show_minor_y_grid_lines=True,
                  top_margin=10,
                  right_margin=4,
                  bottom_margin=4,
-                 left_margin=4):
+                 left_margin=4,
+                 y_min_intervals=None,
+                 start_y_from_zero=False):
+        """
+        Style options for line graph
+
+        :param grid_line_colour: Colour of majour grid lines
+        :param grid_line_minor_colour: Colour of minor grid lines
+        :param axis_line_colour: Colour of x and y axis
+        :param scale_text_colour: Colour of text on scale on axes
+        :param scale_text_size: Font size of scale text
+        :param y_scale_text_distance: Horizontal distance of scale text from y axis
+        :param y_scale_text_width: Width of labels on y axis
+        :param x_scale_text_height: Height of x axis labels
+        :param y_scale_text_anchor: SVG anchor type of y axis labels
+        :param x_scale_border: Whether or not to draw a border around the x scale
+        :param x_label_rotation: Degrees (clockwise) to rotate x axis labels
+        :param show_key: Whether or not to show the key
+        :param key_row_height: Height of a row of labels in the key section
+        :param key_title: Title for key section
+        :param key_title_text_colour: Colour of key title
+        :param key_title_text_size: Font size of key title
+        :param key_title_width: Width allowed for key title
+        :param key_label_text_colour: Colour of key labels
+        :param key_label_text_size: Font size of key labels
+        :param key_max_rows: Maximum number of rows to display the key in
+        :param key_order_in_columns: Set to True to order keys in columns instead of rows
+        :param auto_format_y_axis: Whether or not to automatically format the numbers on the y
+                                   axis (i.e. turning 1400 into 1.4k)
+        :param y_label_units: Units to append to y axis labels
+        :param y_label_pre_units: Units to prepend to y axis labels (i.e. for currencies)
+        :param y_interval: Hard coded major y interval, or None for automatic
+        :param y_minor_interval: Hard coded minor y interval. Must exactly divide major interval
+        :param show_minor_x_grid_lines: Whether or not to show minor x grid lines
+        :param show_minor_y_grid_lines: Whether or not to show minot y grid lines
+        :param top_margin: Top margin size
+        :param right_margin: Right margin size
+        :param bottom_margin: Bottom margin size
+        :param left_margin: Left margin size
+        :param y_min_intervals: Minimum number of intervals on y axis
+        :param start_y_from_zero: Whether or not to always start the y axis from 0
+        """
 
         self.grid_line_colour = grid_line_colour
+        self.grid_line_minor_colour = grid_line_minor_colour
         self.axis_line_colour = axis_line_colour
         self.scale_text_colour = scale_text_colour
         self.scale_text_size = scale_text_size
@@ -53,13 +101,14 @@ class SvgLineGraphStyle(object):
         self.x_scale_border = x_scale_border
         self.x_label_rotation = x_label_rotation
         self.show_key = show_key
-        self.key_height = key_height
+        self.key_row_height = key_row_height
         self.key_title = key_title
         self.key_title_text_colour = key_title_text_colour
         self.key_title_text_size = key_title_text_size
         self.key_title_width = key_title_width
         self.key_label_text_colour = key_label_text_colour
         self.key_label_text_size = key_label_text_size
+        self.key_max_rows = key_max_rows
         self.auto_format_y_axis = auto_format_y_axis
         self.y_label_units = y_label_units
         self.y_label_pre_units = y_label_pre_units
@@ -68,12 +117,18 @@ class SvgLineGraphStyle(object):
         self.top_margin = top_margin
         self.left_margin = left_margin
         self.bottom_margin = bottom_margin
+        self.y_interval = y_interval
+        self.y_minor_interval = y_minor_interval
+        self.y_min_intervals = y_min_intervals
+        self.start_y_from_zero = start_y_from_zero
+        self.show_minor_y_grid_lines = show_minor_y_grid_lines
+        self.key_order_in_columns = key_order_in_columns
 
 
 class SvgLineGraphSeriesStyle(object):
     def __init__(self, line_colour, point_fill_colour=None, point_outline_colour=None, line_thickness=1,
                  point_outline_thickness=1, show_points=False, show_line=True, point_radius=5, shade_under_line=False,
-                 shade_colour=None):
+                 shade_colour=None, key_shape='square', key_colour=None):
         """
         :param line_colour: The colour of the line
         :param point_fill_colour: The fill colour of the circles rendered for each point
@@ -85,6 +140,8 @@ class SvgLineGraphSeriesStyle(object):
         :param point_radius: The radius of the circles rendered for each point
         :param shade_under_line: Whether or not to shade the area under the line
         :param shade_colour: The colour to shade the area under the line (hint: make this semi-transparent)
+        :param key_shape: The shape of the key, either "square" or "circle"
+        :param key_colour: The colour for the key. If None, defaults to line colour
         """
         self.line_colour = line_colour
         self.line_thickness = line_thickness
@@ -96,10 +153,12 @@ class SvgLineGraphSeriesStyle(object):
         self.point_radius = point_radius
         self.shade_under_line = shade_under_line
         self.shade_colour = shade_colour
+        self.key_shape = key_shape
+        self.key_colour = key_colour
 
     def clone(self, line_colour=None, point_fill_colour=None, point_outline_colour=None, line_thickness=None,
               point_outline_thickness=None, show_points=None, show_line=None, point_radius=None, shade_under_line=None,
-              shade_colour=None):
+              shade_colour=None, key_shape=None, key_colour=None):
         if line_colour is None:
             line_colour = self.line_colour
         if point_fill_colour is None:
@@ -120,6 +179,10 @@ class SvgLineGraphSeriesStyle(object):
             shade_under_line = self.shade_under_line
         if shade_colour is None:
             shade_colour = self.shade_colour
+        if key_shape is None:
+            key_shape = self.key_shape
+        if key_colour is None:
+            key_colour = self.key_colour
 
         return SvgLineGraphSeriesStyle(
             line_colour=line_colour,
@@ -131,7 +194,9 @@ class SvgLineGraphSeriesStyle(object):
             show_line=show_line,
             point_radius=point_radius,
             shade_under_line=shade_under_line,
-            shade_colour=shade_colour
+            shade_colour=shade_colour,
+            key_shape=key_shape,
+            key_colour=key_colour
         )
 
 
@@ -151,21 +216,20 @@ class SvgLineGraphSeries(object):
 
 
 class SvgLineGraph(object):
-    def __init__(self, x_labels=None, style=None, y_interval=None):
+    def __init__(self, x_labels=None, style=None):
 
         self.x_labels = x_labels
         # List of all series in the graph
         self.series = []
         # Range of y values
-        self.y_min = 0
-        self.y_max = 0
+        self.y_min = None
+        self.y_max = None
         # Number of data points
         self.x_range = 0
         if x_labels:
             self.x_range = len(x_labels)
 
         self.style = style if style else SvgLineGraphStyle()
-        self.y_interval = y_interval
 
     def add_series(self, name, series_data, series_style):
         """
@@ -178,10 +242,10 @@ class SvgLineGraph(object):
         for y in series_data:
             if y is None:
                 continue
-            if y < self.y_min:
+            if self.y_min is None or y < self.y_min:
                 self.y_min = y
 
-            if y > self.y_max:
+            if self.y_max is None or y > self.y_max:
                 self.y_max = y
 
         x_range = len(series_data)
@@ -222,7 +286,17 @@ class SvgLineGraph(object):
 
         y_label_width = style.y_scale_text_width
         x_label_height = style.x_scale_text_height
-        key_height = style.key_height if style.show_key else 0
+        key_row_height = style.key_row_height
+        if style.show_key:
+            # Calculate the number of actual rows to display in the key, avoiding having less
+            # than 2 items in the majority of rows
+            key_num_rows = math.ceil(len(self.series) / 2)
+            if key_num_rows > style.key_max_rows:
+                key_num_rows = style.key_max_rows
+        else:
+            key_num_rows = 0
+        
+        key_height = key_row_height * key_num_rows
 
         left_margin = y_label_width + style.left_margin
         right_margin = style.right_margin
@@ -259,17 +333,47 @@ class SvgLineGraph(object):
         x_screen_range = x_plot_size
         x_screen_interval = float(x_screen_range) / x_steps
 
+        # Calculate the y interval (major gridlines)
+        y_math_interval = style.y_interval if style.y_interval else self.get_default_y_interval()
+
+        # Calculate the range of values that we want to show the graph over
+        y_range_min = math.floor(self.y_min / y_math_interval)
+        y_range_max = math.ceil(self.y_max / y_math_interval)
+
+        if self.style.start_y_from_zero:
+            # Fudge the range to include y = 0
+            if y_range_min > 0:
+                y_range_min = 0
+            elif y_range_max < 0:
+                y_range_max = 0
+
+        y_range = y_range_max - y_range_min
+        
+        # This allows us to set a minimum number of y intervals to display
+        if style.y_min_intervals and y_range < style.y_min_intervals:
+            target_range = style.y_min_intervals
+            # We want to add half of the additional range above and below the current range
+            # unless the additional range is odd, then we should add slightly more above it
+            extra_range = target_range - y_range
+            add_below = extra_range // 2
+            add_above = extra_range - add_below
+            # We don't want this "fudging" of the range to go over an axis
+            if y_range_min >= 0 and y_range_min - add_below < 0:
+                # This would cross the axis. Simply move the bottom of the range down to
+                # 0 and add the additional range to the top
+                add_below = y_range_min
+                add_above = extra_range - add_below
+
+            y_range_min -= add_below
+            y_range_max += add_above
+            y_range = y_range_max - y_range_min
+        
+        y_math_min = y_range_min * y_math_interval
+        y_math_max = y_range_max * y_math_interval
+        y_math_range = y_range * y_math_interval
+
         # Calculate scales etc for y coords
-        y_math_interval = self.y_interval if self.y_interval else self.get_default_y_interval()
-        y_math_offset = math.floor(self.y_min / y_math_interval) * y_math_interval
-
-        # This is fudging it, as we kind if need to round in both directions for graphs that are both +ve and -ve
-        y_range = (self.y_max - self.y_min) / y_math_interval
-        if self.y_min < 0 and self.y_max > 0:
-            y_range += 1
-
-        y_math_range = math.ceil(y_range) * y_math_interval
-
+        y_math_offset = y_math_min  # math.floor(self.y_min / y_math_interval) * y_math_interval
         y_steps = int(y_math_range / y_math_interval)
 
         if y_steps == 0:
@@ -300,22 +404,58 @@ class SvgLineGraph(object):
 
         y_screen_min = y_math_to_screen(y_math_offset)
         y_screen_max = y_math_to_screen(y_math_offset + y_math_range)
-
-        for x_step in range(x_steps + 1):
+        
+        # Draw the x grid lines (but not the y-axis to avoid layering issues)
+        for x_step in range(1, x_steps + 1):
             if style.show_minor_x_grid_lines or self.x_labels[x_step]:
                 screen_x = x_math_to_screen(x_step)
-                colour = style.axis_line_colour if x_step == 0 else style.grid_line_colour
+                if self.x_labels[x_step]:
+                    colour = style.grid_line_colour
+                else:
+                    colour = style.grid_line_minor_colour
+
                 svg.line(screen_x, y_screen_min, screen_x, y_screen_max, stroke=colour)
 
         if x_steps == 1:
             # Add an extra line down the middle
             svg.line(x_screen_min + x_plot_size / 2, y_screen_min, x_screen_min + x_plot_size / 2, y_screen_max, stroke=style.grid_line_colour)
-
+        
+        # Figure out where to draw the x axis
+        math_x_axis = y_range_min
+        if y_math_min < 0 and y_math_max > 0:
+            math_x_axis = 0
+        
+        # Draw y major gridlines and x axis
         for y_step in range(y_steps + 1):
             math_y = y_step * y_math_interval + y_math_offset
             screen_y = y_math_to_screen(math_y)
-            colour = style.axis_line_colour if math_y == 0 else style.grid_line_colour
+            colour = style.axis_line_colour if math_y == math_x_axis else style.grid_line_colour
             svg.line(x_screen_min, screen_y, x_screen_max, screen_y, stroke=colour)
+        
+        # Draw y minor gridlines
+        if style.y_minor_interval and style.show_minor_y_grid_lines:
+            # First sanity check
+            sub_divisions = y_math_interval / style.y_minor_interval
+            if math.floor(sub_divisions) != sub_divisions:
+                log.error('Invalid minor interval ({}) for major interval({})'
+                          .format(style.y_minor_interval, y_math_interval))
+            else:
+                # Draw on the minor grid lines
+                math_y = y_math_min
+                while math_y < y_math_max:
+                    if math_y % y_math_interval == 0:
+                        # Already a gridline here
+                        pass
+                    else:
+                        screen_y = y_math_to_screen(float(math_y))
+                        colour = style.grid_line_minor_colour
+                        svg.line(x_screen_min, screen_y, x_screen_max, screen_y, stroke=colour)
+
+                    math_y += style.y_minor_interval
+
+        # Draw the y axis
+        y_axis = x_math_to_screen(0)
+        svg.line(y_axis, y_screen_min, y_axis, y_screen_max, stroke=style.axis_line_colour)
 
         # Scale
         for y_step in range(y_steps + 1):
@@ -385,23 +525,50 @@ class SvgLineGraph(object):
 
         # Draw the key
         if style.show_key:
-            key_x_offset = style.key_title_width + style.left_margin
-            key_y_offset = height - style.key_height - style.bottom_margin
-            key_width = width - right_margin - key_x_offset
-            key_item_width = key_width / len(self.series)
-            key_square_offset = 10
-            key_square_size = style.key_height - key_square_offset * 2
+            row_length = math.ceil(len(self.series) / key_num_rows)
 
-            svg.text(style.key_title, x_screen_min, key_y_offset + style.key_height / 2 + 1,
+            key_x_offset = style.key_title_width + style.left_margin
+            key_y_offset = height - key_height - style.bottom_margin
+            key_width = width - right_margin - key_x_offset
+            key_item_width = key_width / row_length
+            key_square_offset = 10
+            key_square_size = style.key_row_height - key_square_offset * 2
+
+            svg.text(style.key_title, x_screen_min, key_y_offset + style.key_row_height / 2 + 1,
                      fill=style.key_title_text_colour, font_size=style.key_title_text_size, alignment_baseline='middle')
 
             i = 0
             for series in self.series:
-                x = key_x_offset + i * key_item_width
-                y = key_y_offset + key_square_offset
+                if style.key_order_in_columns:
+                    # Keys fill columns before rows, difficult to explain I guess..
+                    # Row index, 0 being top
+                    row = i % key_num_rows
+                    # Position in row with 0 being first (left-most)
+                    row_pos = i // key_num_rows
+                else:
+                    # Row index, 0 being top
+                    row = i // row_length
+                    # Position in row with 0 being first (left-most)
+                    row_pos = i % row_length
+                
+                row_y_offset = key_y_offset + row * style.key_row_height
 
-                svg.rect(x, y, key_square_size, key_square_size, fill=series.style.line_colour)
-                svg.text(series.name, x + key_square_size + key_square_offset, key_y_offset + style.key_height / 2 + 1,
+                x = key_x_offset + row_pos * key_item_width
+                y = row_y_offset + key_square_offset
+
+                colour = series.style.key_colour if series.style.key_colour else series.style.line_colour
+                shape = series.style.key_shape
+                
+                if shape == 'square':
+                    svg.rect(x, y, key_square_size, key_square_size, fill=colour)
+                elif shape == 'circle':
+                    r = key_square_size / 2
+                    svg.circle(x + r, y + r, r, fill=colour)
+                else:
+                    raise Exception('Invalid key shape: {}'.shape)
+
+                svg.text(series.name, x + key_square_size + key_square_offset,
+                         row_y_offset + style.key_row_height / 2 + 1,
                          alignment_baseline='middle', font_size=style.key_label_text_size,
                          fill=style.key_label_text_colour)
                 i += 1
