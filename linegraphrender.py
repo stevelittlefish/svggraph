@@ -353,10 +353,10 @@ class SvgLineGraph(object):
         if style.y_min_intervals and y_range < style.y_min_intervals:
             target_range = style.y_min_intervals
             # We want to add half of the additional range above and below the current range
-            # unless the additional range is odd, then we should add slightly more above it
+            # unless the additional range is odd, then we should add slightly more below it
             extra_range = target_range - y_range
-            add_below = extra_range // 2
-            add_above = extra_range - add_below
+            add_above = extra_range // 2
+            add_below = extra_range - add_above
             # We don't want this "fudging" of the range to go over an axis
             if y_range_min >= 0 and y_range_min - add_below < 0:
                 # This would cross the axis. Simply move the bottom of the range down to
