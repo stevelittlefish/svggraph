@@ -48,7 +48,8 @@ class SvgLineGraphStyle(object):
                  bottom_margin=4,
                  left_margin=4,
                  y_min_intervals=None,
-                 start_y_from_zero=False):
+                 start_y_from_zero=False,
+                 x_scale_offset=1):
         """
         Style options for line graph
 
@@ -87,6 +88,7 @@ class SvgLineGraphStyle(object):
         :param left_margin: Left margin size
         :param y_min_intervals: Minimum number of intervals on y axis
         :param start_y_from_zero: Whether or not to always start the y axis from 0
+        :param x_scale_offset: Amount of pixels downwards to shift x labels
         """
 
         self.grid_line_colour = grid_line_colour
@@ -123,6 +125,7 @@ class SvgLineGraphStyle(object):
         self.start_y_from_zero = start_y_from_zero
         self.show_minor_y_grid_lines = show_minor_y_grid_lines
         self.key_order_in_columns = key_order_in_columns
+        self.x_scale_offset = x_scale_offset
 
 
 class SvgLineGraphSeriesStyle(object):
@@ -216,8 +219,7 @@ class SvgLineGraphSeries(object):
 
 
 class SvgLineGraph(object):
-    def __init__(self, x_labels=None, style=None):
-
+    def __init__(self, x_labels=None, style=None, dump_debug_info=False):
         self.x_labels = x_labels
         # List of all series in the graph
         self.series = []
@@ -230,6 +232,8 @@ class SvgLineGraph(object):
             self.x_range = len(x_labels)
 
         self.style = style if style else SvgLineGraphStyle()
+        
+        self.dump_debug_info = dump_debug_info
 
     def add_series(self, name, series_data, series_style):
         """
@@ -275,10 +279,17 @@ class SvgLineGraph(object):
             else:
                 return 10 ** (exp + 1)
 
-    def render(self, width, height, view_box_mode=False):
+    def render(self, width, height, view_box_mode=False, dump_debug_info=None):
         """
         :return: String containing SVG render of line graph
         """
+        if dump_debug_info is None:
+            dump_debug_info = self.dump_debug_info
+
+        def debug_out(text):
+            if dump_debug_info:
+                print(' << GRAPH DEBUG >> ' + text)
+
         style = self.style
 
         svg = svglib.SvgGenerator()
@@ -305,6 +316,15 @@ class SvgLineGraph(object):
 
         x_plot_size = width - left_margin - right_margin
         y_plot_size = height - top_margin - bottom_margin
+        
+        debug_out('Y Label Width: {}'.format(y_label_width))
+        debug_out('X Label Height: {}'.format(x_label_height))
+        debug_out('Key Row Height: {}'.format(key_row_height))
+        debug_out('Key Num Rows: {}'.format(key_num_rows))
+        debug_out('Key Height: {}'.format(key_height))
+        debug_out('Margins (t/r/b/l): {} {} {} {}'.format(top_margin, right_margin,
+                                                          bottom_margin, left_margin))
+        debug_out('Plot Size: {} x {}'.format(x_plot_size, y_plot_size))
 
         has_data = False
         for series in self.series:
@@ -332,7 +352,7 @@ class SvgLineGraph(object):
         x_screen_offset = left_margin
         x_screen_range = x_plot_size
         x_screen_interval = float(x_screen_range) / x_steps
-
+        
         # Calculate the y interval (major gridlines)
         y_math_interval = style.y_interval if style.y_interval else self.get_default_y_interval()
 
@@ -348,7 +368,7 @@ class SvgLineGraph(object):
                 y_range_max = 0
 
         y_range = y_range_max - y_range_min
-        
+
         # This allows us to set a minimum number of y intervals to display
         if style.y_min_intervals and y_range < style.y_min_intervals:
             target_range = style.y_min_intervals
@@ -382,7 +402,7 @@ class SvgLineGraph(object):
         y_screen_offset = bottom_margin
         y_screen_range = y_plot_size
         y_screen_interval = y_screen_range / y_steps
-
+        
         def x_math_to_screen(math_x):
             """
             Convert mathematical x coord to screen x coord
@@ -404,6 +424,28 @@ class SvgLineGraph(object):
 
         y_screen_min = y_math_to_screen(y_math_offset)
         y_screen_max = y_math_to_screen(y_math_offset + y_math_range)
+        
+        debug_out('~~ X ~~~~~~~~~~~~~~~~~~~~~~~~~')
+        debug_out('X Math Offset: {}'.format(x_math_offset))
+        debug_out('X Math Range: {}'.format(x_math_range))
+        debug_out('X Math Interval: {}'.format(x_math_interval))
+        debug_out('X Steps: {}'.format(x_steps))
+        debug_out('X Screen Offset: {}'.format(x_screen_offset))
+        debug_out('X Screen Range: {}'.format(x_screen_range))
+        debug_out('X Screen Interval: {}'.format(x_screen_interval))
+        debug_out('X Screen Min: {}'.format(x_screen_min))
+        debug_out('X Screen Max: {}'.format(x_screen_max))
+        
+        debug_out('~~ Y ~~~~~~~~~~~~~~~~~~~~~~~~~')
+        debug_out('Y Math Offset: {}'.format(y_math_offset))
+        debug_out('Y Math Range: {}'.format(y_math_range))
+        debug_out('Y Math Interval: {}'.format(y_math_interval))
+        debug_out('Y Steps: {}'.format(y_steps))
+        debug_out('Y Screen Offset: {}'.format(y_screen_offset))
+        debug_out('Y Screen Range: {}'.format(y_screen_range))
+        debug_out('Y Screen Interval: {}'.format(y_screen_interval))
+        debug_out('Y Screen Min: {}'.format(y_screen_min))
+        debug_out('Y Screen Max: {}'.format(y_screen_max))
         
         # Draw the x grid lines (but not the y-axis to avoid layering issues)
         for x_step in range(1, x_steps + 1):
@@ -500,7 +542,7 @@ class SvgLineGraph(object):
                 screen_x = x_math_to_screen(x_step)
 
                 if style.x_label_rotation:
-                    screen_y = y_screen_min + style.scale_text_size / 3 + 1
+                    screen_y = y_screen_min + style.scale_text_size / 3 + style.x_scale_offset
                     anchor = 'start'
                     transform = svglib.rotation_transform(style.x_label_rotation, screen_x, screen_y)
                 else:
