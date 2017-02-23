@@ -392,12 +392,14 @@ class SvgLineGraph(object):
         y_math_max = y_range_max * y_math_interval
         y_math_range = y_range * y_math_interval
 
+        if y_math_range == 0:
+            y_math_min -= y_math_interval
+            y_math_max += y_math_interval
+            y_math_range = y_math_max - y_math_min
+
         # Calculate scales etc for y coords
         y_math_offset = y_math_min  # math.floor(self.y_min / y_math_interval) * y_math_interval
         y_steps = int(y_math_range / y_math_interval)
-
-        if y_steps == 0:
-            y_steps = 1
 
         y_screen_offset = bottom_margin
         y_screen_range = y_plot_size
@@ -448,19 +450,22 @@ class SvgLineGraph(object):
         debug_out('Y Screen Max: {}'.format(y_screen_max))
         
         # Draw the x grid lines (but not the y-axis to avoid layering issues)
-        for x_step in range(1, x_steps + 1):
-            if style.show_minor_x_grid_lines or self.x_labels[x_step]:
-                screen_x = x_math_to_screen(x_step)
-                if self.x_labels[x_step]:
-                    colour = style.grid_line_colour
-                else:
-                    colour = style.grid_line_minor_colour
+        if x_steps > 1:
+            for x_step in range(1, x_steps + 1):
+                if style.show_minor_x_grid_lines or self.x_labels[x_step]:
+                    screen_x = x_math_to_screen(x_step)
+                    if self.x_labels[x_step]:
+                        colour = style.grid_line_colour
+                    else:
+                        colour = style.grid_line_minor_colour
 
-                svg.line(screen_x, y_screen_min, screen_x, y_screen_max, stroke=colour)
+                    svg.line(screen_x, y_screen_min, screen_x, y_screen_max, stroke=colour)
 
         if x_steps == 1:
             # Add an extra line down the middle
-            svg.line(x_screen_min + x_plot_size / 2, y_screen_min, x_screen_min + x_plot_size / 2, y_screen_max, stroke=style.grid_line_colour)
+            svg.line(x_screen_min + x_plot_size / 2, y_screen_min,
+                     x_screen_min + x_plot_size / 2, y_screen_min - y_plot_size,
+                     stroke=style.grid_line_colour)
         
         # Figure out where to draw the x axis
         math_x_axis = y_range_min
