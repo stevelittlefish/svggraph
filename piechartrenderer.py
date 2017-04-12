@@ -2,13 +2,13 @@
 Renders a lovely pie chart!  Mmmmmmmmm pie...
 """
 
-__author__ = 'Stephen Brown (Little Fish Solutions LTD)'
-
 import logging
 import decimal
 import math
 
-import svglib
+import easysvg
+
+__author__ = 'Stephen Brown (Little Fish Solutions LTD)'
 
 log = logging.getLogger(__name__)
 
@@ -51,7 +51,7 @@ class SvgPieChart(object):
         """
         style = self.style
 
-        svg = svglib.SvgGenerator()
+        svg = easysvg.SvgGenerator()
 
         pie_margin = float(style.pie_margin)
         pie_r = width / 2.0 - pie_margin

@@ -6,7 +6,7 @@ import logging
 import math
 import decimal
 
-import svglib
+import easysvg
 
 __author__ = 'Stephen Brown (Little Fish Solutions LTD)'
 
@@ -292,7 +292,7 @@ class SvgLineGraph(object):
 
         style = self.style
 
-        svg = svglib.SvgGenerator()
+        svg = easysvg.SvgGenerator()
         svg.begin(width, height, view_box_mode=view_box_mode)
 
         y_label_width = style.y_scale_text_width
@@ -544,7 +544,7 @@ class SvgLineGraph(object):
                 if style.x_label_rotation:
                     screen_y = y_screen_min + style.scale_text_size / 3 + style.x_scale_offset
                     anchor = 'start'
-                    transform = svglib.rotation_transform(style.x_label_rotation, screen_x, screen_y)
+                    transform = easysvg.rotation_transform(style.x_label_rotation, screen_x, screen_y)
                 else:
                     screen_y = y_screen_min + style.x_scale_text_height / 2 + 1
                     transform = None

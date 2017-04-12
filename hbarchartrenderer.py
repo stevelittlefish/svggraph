@@ -2,12 +2,12 @@
 Horizontal Bar Chart
 """
 
-__author__ = 'Stephen Brown (Little Fish Solutions LTD)'
-
 import logging
 import decimal
 
-import svglib
+import easysvg
+
+__author__ = 'Stephen Brown (Little Fish Solutions LTD)'
 
 log = logging.getLogger(__name__)
 
@@ -19,8 +19,8 @@ class SvgHBarChartStyle(object):
         self.bar_colour = bar_colour
         self.bar_height = bar_height
         self.bar_spacing = bar_spacing
-        self.label_text_size=label_text_size
-        self.label_text_colour=label_text_colour
+        self.label_text_size = label_text_size
+        self.label_text_colour = label_text_colour
         self.label_height = label_height
         self.normalise = normalise
 
@@ -31,6 +31,7 @@ class SvgHBarChartDataPoint(object):
         self.value = value
         self.ratio = ratio
         self.ratio_to_max = ratio_to_max
+
 
 class SvgHBarChart(object):
     """
@@ -63,7 +64,7 @@ class SvgHBarChart(object):
         :return: String containing SVG render of line graph
         """
         style = self.style
-        svg = svglib.SvgGenerator()
+        svg = easysvg.SvgGenerator()
 
         margin = 5
 
@@ -90,7 +91,6 @@ class SvgHBarChart(object):
             svg.rect(margin, bar_offset_y, bar_width, style.bar_height,
                      fill=style.bar_colour)
             i += 1
-
 
         svg.end()
         return svg.get_svg()
