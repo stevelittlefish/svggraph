@@ -6,4 +6,4 @@ dist
 easyforms.egg-info
 env
 out.log
-
+*.egg-info
