@@ -49,7 +49,14 @@ class SvgLineGraphStyle(object):
                  left_margin=4,
                  y_min_intervals=None,
                  start_y_from_zero=False,
-                 x_scale_offset=1):
+                 x_scale_offset=1,
+                 event_label_text_colour='#555',
+                 event_label_text_height=10,
+                 event_label_text_size=12,
+                 event_label_text_rotation=0,
+                 event_default_colour='#5555ff',
+                 event_line_thickness=1,
+                 event_triangle_size=3):
         """
         Style options for line graph
 
@@ -89,8 +96,14 @@ class SvgLineGraphStyle(object):
         :param y_min_intervals: Minimum number of intervals on y axis
         :param start_y_from_zero: Whether or not to always start the y axis from 0
         :param x_scale_offset: Amount of pixels downwards to shift x labels
+        :param event_label_text_colour: Colour of event labels, if there are events
+        :param event_label_text_height: Height of event labels section, if there are events
+        :param event_label_text_size: Font size of event labels
+        :param event_label_text_rotation: Degrees (anti-clockwise) to rotate event labels
+        :param event_default_colour: Default line colour for events
+        :param event_line_thickness: Line thickness for events
+        :param event_triangle_size: Triangle size at top of events. Set to 0 to disable
         """
-
         self.grid_line_colour = grid_line_colour
         self.grid_line_minor_colour = grid_line_minor_colour
         self.axis_line_colour = axis_line_colour
@@ -126,6 +139,13 @@ class SvgLineGraphStyle(object):
         self.show_minor_y_grid_lines = show_minor_y_grid_lines
         self.key_order_in_columns = key_order_in_columns
         self.x_scale_offset = x_scale_offset
+        self.event_label_text_colour = event_label_text_colour
+        self.event_label_text_height = event_label_text_height
+        self.event_label_text_size = event_label_text_size
+        self.event_label_text_rotation = event_label_text_rotation
+        self.event_default_colour = event_default_colour
+        self.event_line_thickness = event_line_thickness
+        self.event_triangle_size = event_triangle_size
 
 
 class SvgLineGraphSeriesStyle(object):
@@ -240,6 +260,24 @@ class SvgLineGraphSeries(object):
         return out
 
 
+class SvgLineGraphEvent(object):
+    """
+    Represents an "event" that occured at a specific x axis point.  This will be displayed as a
+    labelled vertical line
+    """
+    def __init__(self, x_position, name, colour=None):
+        """
+        :param x_position: The integer position of the event, with 0 being the first x interval,
+                           1 being the second...
+        :param name: Even name for label
+        :param colour: Colour override.  If no colour is specified, the even colour from the
+                       graph style will be used instead
+        """
+        self.x_position = x_position
+        self.name = name
+        self.colour = colour
+
+
 class SvgLineGraph(object):
     def __init__(self, x_labels=None, style=None, dump_debug_info=False):
         self.x_labels = x_labels
@@ -256,6 +294,9 @@ class SvgLineGraph(object):
         self.style = style if style else SvgLineGraphStyle()
         
         self.dump_debug_info = dump_debug_info
+
+        # List of events
+        self.events = {}
 
     def add_series(self, name, series_data, series_style):
         """
@@ -281,6 +322,19 @@ class SvgLineGraph(object):
             self.x_range = x_range
 
         return series
+
+    def add_event(self, x_position, name, colour=None):
+        """
+        Note: only one event can exist at a given x_position - subsequent events will overwrite
+        existing events at a given location
+
+        :param x_position: The integer position of the event, with 0 being the first x interval,
+                           1 being the second...
+        :param name: Even name for label
+        :param colour: Colour override.  If no colour is specified, the even colour from the
+                       graph style will be used instead
+        """
+        self.events[x_position] = SvgLineGraphEvent(x_position, name, colour)
 
     def get_default_y_interval(self):
         """
@@ -334,10 +388,13 @@ class SvgLineGraph(object):
             key_num_rows = 0
         
         key_height = key_row_height * key_num_rows
+        events_height = 0
+        if self.events:
+            events_height = style.event_label_text_height
 
         left_margin = y_label_width + style.left_margin
         right_margin = style.right_margin
-        top_margin = style.scale_text_size / 2 + style.top_margin
+        top_margin = style.scale_text_size / 2 + style.top_margin + events_height
         bottom_margin = x_label_height + key_height + style.bottom_margin
 
         x_plot_size = width - left_margin - right_margin
@@ -645,6 +702,48 @@ class SvgLineGraph(object):
                          alignment_baseline='middle', font_size=style.key_label_text_size,
                          fill=style.key_label_text_colour)
                 i += 1
+        
+        # Events
+        event_positions = sorted(self.events.keys())
+        for event_position in event_positions:
+            event = self.events[event_position]
+            math_x = event_position * x_math_interval
+            screen_x = x_math_to_screen(math_x)
+            top = y_screen_max
+            bottom = y_screen_min
+            triangle_size = style.event_triangle_size
+
+            if triangle_size:
+                top += style.event_triangle_size
+
+            event_colour = event.colour
+            if event_colour is None:
+                event_colour = style.event_default_colour
+            
+            # Vertical Line
+            svg.line(screen_x, bottom, screen_x, top, stroke=event_colour,
+                     stroke_width=style.event_line_thickness)
+            
+            # Triangle
+            if triangle_size:
+                svg.polygon([
+                    (screen_x - triangle_size, top - triangle_size),
+                    (screen_x + triangle_size, top - triangle_size),
+                    (screen_x, top)
+                ], stroke=event_colour, fill=event_colour)
+            
+            # Label
+            anchor = 'middle'
+            label_y = top - style.event_label_text_size / 2 - 1
+            transform = None
+
+            if style.event_label_text_rotation:
+                anchor = 'start'
+                transform = easysvg.rotation_transform(-style.event_label_text_rotation, screen_x,
+                                                       label_y)
+
+            svg.text(event.name, screen_x, label_y, anchor=anchor, transform=transform,
+                     font_size=style.event_label_text_size, fill=style.event_label_text_colour)
 
         # Calculate screen coordinates for each of the series
         for series in self.series:

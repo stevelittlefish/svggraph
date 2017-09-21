@@ -26,8 +26,8 @@ def init():
 
     while date <= now:
         day_number = (date.timestamp() - start_timestamp) / SECONDS_IN_DAY
-        sin = math.sin(day_number * math.pi * 2 / 365) + 1
-        mult = day_number * 0.05 + 10
+        sin = math.sin(day_number * math.pi * 2 / 365) + 2
+        mult = day_number * 0.05 + 5
         rand = random.random() * mult * 2
         sales = sin * mult + rand + 5
         

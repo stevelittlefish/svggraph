@@ -44,14 +44,16 @@ def line_graph():
         key_title_width=110,
         key_title_text_size=11,
         key_label_text_size=11,
-        key_max_rows=2,
+        key_max_rows=1,
         key_order_in_columns=True,
         show_minor_x_grid_lines=False,
         x_label_rotation=45,
-        x_scale_text_height=80,
+        x_scale_text_height=60,
         right_margin=80,
         y_min_intervals=3,
         y_minor_interval=10,
+        event_label_text_rotation=45,
+        event_label_text_height=50,
     )
 
     base_series_style = svggraph.SvgLineGraphSeriesStyle(
@@ -91,6 +93,10 @@ def line_graph():
             show_line=True,
             line_colour=colour_avg,
         ))
+
+    line_chart.add_event(200, 'Widget v2.0')
+    line_chart.add_event(300, 'Widget v2.1')
+    line_chart.add_event(480, 'CEO Fired', '#EE0000')
     
     svg = line_chart.render(800, 500, view_box_mode=True)
 
