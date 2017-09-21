@@ -11,6 +11,7 @@ import jinja2
 from littlefish import timetool
 
 from main import main
+import testdata
 
 __author__ = 'Stephen Brown (Little Fish Solutions LTD)'
 
@@ -60,6 +61,9 @@ def create_app():
         log.error('Exception caught: %s\n%s' % (title, message))
 
         return render_template('error_page.html', title=title, message=message, preformat=True)
+    
+    log.info('Initialising Test Data')
+    testdata.init()
 
     log.info('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
     log.info(' Startup Complete!')
