@@ -40,7 +40,6 @@ def line_graph():
         raw.append(item[1])
 
     graph_style = svggraph.SvgLineGraphStyle(
-        key_title='',
         key_title_width=110,
         key_title_text_size=11,
         key_label_text_size=11,
@@ -60,7 +59,7 @@ def line_graph():
         line_colour='#000000',
         show_points=False,
         show_line=False,
-        point_radius=3,
+        point_radius=2,
         line_thickness=2,
     )
 
