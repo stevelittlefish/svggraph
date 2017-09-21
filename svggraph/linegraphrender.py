@@ -217,6 +217,28 @@ class SvgLineGraphSeries(object):
     def has_data(self):
         return self.num_points > 0
 
+    def get_rolling_average(self, average_width=10):
+        """
+        Return the data points for a rolling average of this series
+
+        :param average_width: The width of the rolling average
+        :return: List of numeric values, ready to add in another series
+        """
+        out = []
+        before = average_width // 2
+        
+        for i in range(before):
+            out.append(None)
+
+        for i in range(len(self.data) - average_width + 1):
+            total = 0
+            for j in range(i, i + average_width):
+                total += self.data[j]
+
+            out.append(total / average_width)
+
+        return out
+
 
 class SvgLineGraph(object):
     def __init__(self, x_labels=None, style=None, dump_debug_info=False):
@@ -238,7 +260,9 @@ class SvgLineGraph(object):
     def add_series(self, name, series_data, series_style):
         """
         Add a series to the graph
+
         :param series_data: A list of data points (must be numeric)
+        :return: The series
         """
         series = SvgLineGraphSeries(name, series_data, series_style)
         self.series.append(series)
@@ -255,6 +279,8 @@ class SvgLineGraph(object):
         x_range = len(series_data)
         if x_range > self.x_range:
             self.x_range = x_range
+
+        return series
 
     def get_default_y_interval(self):
         """
