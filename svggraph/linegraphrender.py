@@ -298,17 +298,10 @@ class SvgLineGraph(object):
         # List of events
         self.events = {}
 
-    def add_series(self, name, series_data, series_style):
-        """
-        Add a series to the graph
-
-        :param series_data: A list of data points (must be numeric)
-        :return: The series
-        """
-        series = SvgLineGraphSeries(name, series_data, series_style)
+    def _add_series(self, series):
         self.series.append(series)
 
-        for y in series_data:
+        for y in series.data:
             if y is None:
                 continue
             if self.y_min is None or y < self.y_min:
@@ -317,11 +310,30 @@ class SvgLineGraph(object):
             if self.y_max is None or y > self.y_max:
                 self.y_max = y
 
-        x_range = len(series_data)
+        x_range = len(series.data)
         if x_range > self.x_range:
             self.x_range = x_range
 
+    def add_series(self, name, series_data, series_style):
+        """
+        Add a series to the graph
+
+        :param series_data: A list of data points (must be numeric)
+        :return: The series
+        """
+        series = SvgLineGraphSeries(name, series_data, series_style)
+
+        self._add_series(series)
+
         return series
+
+    def add(self, item):
+        if isinstance(item, SvgLineGraphSeries):
+            self._add_series(item)
+        elif isinstance(item, SvgLineGraphEvent):
+            self.events[item.x_position] = item
+        else:
+            raise ValueError('I don\'t know how to add a {}'.format(item.__class__.__name__))
 
     def add_event(self, x_position, name, colour=None):
         """

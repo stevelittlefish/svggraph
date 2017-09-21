@@ -7,12 +7,12 @@ if sys.version_info.major < 3:
 setup(
     name='svggraph',
     packages=['svggraph'],
-    version='0.0.2',
+    version='0.0.3',
     description='SVG graph rendering library',
     author='Stephen Brown (Little Fish Solutions LTD)',
     author_email='opensource@littlefish.solutions',
     url='https://github.com/stevelittlefish/svggraph',
-    download_url='https://github.com/stevelittlefish/svggraph/archive/v0.0.2.tar.gz',
+    download_url='https://github.com/stevelittlefish/svggraph/archive/v0.0.3.tar.gz',
     keywords=['svg', 'graph', 'line', 'bar', 'pie'],
     license='Apache',
     classifiers=[
