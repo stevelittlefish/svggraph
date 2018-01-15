@@ -226,7 +226,13 @@ class SvgLineGraphSeriesStyle(object):
 class SvgLineGraphSeries(object):
     def __init__(self, name, data, style):
         self.name = name
-        self.data = data
+        self.data = []
+        # We must convert any decimals to floats
+        for item in data:
+            if isinstance(item, decimal.Decimal):
+                self.data.append(float(item))
+            else:
+                self.data.append(item)
         self.style = style
 
     @property
